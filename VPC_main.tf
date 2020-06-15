@@ -52,17 +52,80 @@ resource "aws_subnet" "private_subnet" {
   }
 }
 
-resource "aws_subnet" "DB_subnet" { 
+######################## DB_Subnet Group Creation ###########################################
+
+resource "aws_subnet" "DB_subnet1" { 
   vpc_id                  = aws_vpc.vpc_test.id
   cidr_block              = "${var.cidr_block_subnet_3}"
   availability_zone       = var.Availablity_Zone_3
-  map_public_ip_on_launch = "false"
+  map_public_ip_on_launch = "true"
 
   tags = {
-    Name = "DB_Subnet-${var.vpc_name}"
+    Name = "DB_Subnet1-${var.vpc_name}"
     Env  = "test"
   }
 }
+
+
+resource "aws_subnet" "DB_subnet2" { 
+  vpc_id                  = aws_vpc.vpc_test.id
+  cidr_block              = "${var.cidr_block_subnet_4}"
+  availability_zone       = var.Availablity_Zone_4
+  map_public_ip_on_launch = "true"
+
+  tags = {
+    Name = "DB_Subnet2-${var.vpc_name}"
+    Env  = "test"
+  }
+}
+
+ resource "aws_db_subnet_group" "mssqldatabase" {
+   name = "mysqldbsubnetgrp"
+   description = "Database subnet groups for Suresby_vpc"
+   
+   subnet_ids = ["${aws_subnet.DB_subnet1.id}", "${aws_subnet.DB_subnet2.id}"]
+   
+   tags = {
+
+     name = "Database_subnet_group"
+     Env = "test"
+     owner = "Hinukumar"
+   }
+ }
+
+############################## DATABASE CREATION END ############################################
+
+
+#################################### DATA BASE INSTANCE CREATION ###############################
+
+
+# Create a database server
+
+resource "aws_db_instance" "suresby_demo_db" {
+  engine         = "mysql"
+  engine_version = "5.7"
+  instance_class = "db.t2.micro"
+  name           = "suresby_db"
+  username       = "rootuser"
+  password       = "rootpassword"
+  allocated_storage    = 20
+  storage_type         = "gp2"
+  publicly_accessible = "true"
+
+  vpc_security_group_ids = ["${aws_security_group.db_subnet1_sg.id}","${aws_security_group.db_subnet2_sg.id}"]
+
+  skip_final_snapshot = "true"
+
+  db_subnet_group_name = "mysqldbsubnetgrp"
+
+   availability_zone = "us-east-1c"
+
+   #parameter_group_name = "suresby_demo_db.mysql5.7"
+
+
+}
+
+
 
 #################################### CREATING SECURITY GROUPS ####################################
 
@@ -150,6 +213,53 @@ resource "aws_security_group_rule" "SSH-open-from-public-to-private" {
     source_security_group_id = "${aws_security_group.public_subnet.id}"
 }
 
+resource "aws_security_group_rule" "private-to-db-egress" {
+    type = "egress"
+    from_port = 3306  
+    to_port = 3306
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.private_subnet.id}"
+    source_security_group_id = "${aws_security_group.db_subnet1_sg.id}"
+}
+
+resource "aws_security_group_rule" "private-to-db-egress2" {
+    type = "egress"
+    from_port = 3306
+    to_port = 3306
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.db_subnet2_sg.id}"
+    source_security_group_id = "${aws_security_group.private_subnet.id}"
+}
+
+resource "aws_security_group" "db_subnet1_sg" {
+  vpc_id      = aws_vpc.vpc_test.id
+  name        = "db_subnet1_sg"
+  description = "private Instances Security Group"
+}
+
+resource "aws_security_group_rule" "private-to-db-ingress" {
+    type = "ingress"
+    from_port = 3306
+    to_port = 3306
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.db_subnet1_sg.id}"
+    source_security_group_id = "${aws_security_group.private_subnet.id}"
+}
+
+resource "aws_security_group" "db_subnet2_sg" {
+  vpc_id      = aws_vpc.vpc_test.id
+  name        = "db_subnet2_sg"
+  description = "private Instances Security Group"
+}
+
+resource "aws_security_group_rule" "private-to-db-ingress1" {
+    type = "ingress"
+    from_port = 3306
+    to_port = 3306
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.db_subnet2_sg.id}"
+    source_security_group_id = "${aws_security_group.private_subnet.id}"
+}
 
 ################################### ROUTING TABLE CREATION START ##################################
 
@@ -188,8 +298,13 @@ resource "aws_route_table_association" "private_subnet_association" {
   route_table_id = "${aws_route_table.RT-public_subnet.id}"
 }
 
-resource "aws_route_table_association" "DB_subnet_association" {
-  subnet_id = "${aws_subnet.DB_subnet.id}"
+resource "aws_route_table_association" "DB_subnet1_association" {
+  subnet_id = "${aws_subnet.DB_subnet1.id}"
+  route_table_id = "${aws_route_table.RT-public_subnet.id}"
+}
+
+resource "aws_route_table_association" "DB_subnet2_association" {
+  subnet_id = "${aws_subnet.DB_subnet2.id}"
   route_table_id = "${aws_route_table.RT-public_subnet.id}"
 }
 
