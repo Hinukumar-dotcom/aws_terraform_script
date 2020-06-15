@@ -91,6 +91,47 @@ resource "aws_security_group_rule" "SSH-open-to-public" {
     #source_security_group_id = "${aws_security_group.private_subnet.id}"
 }
 
+resource "aws_security_group_rule" "HTTP-open-to-public" {
+    type = "ingress"
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.public_subnet.id}"
+    cidr_blocks = ["0.0.0.0/0"]
+    #source_security_group_id = "${aws_security_group.private_subnet.id}"
+}
+
+resource "aws_security_group_rule" "HTTPS-open-to-public" {
+    type = "ingress"
+    from_port = 443
+    to_port = 443
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.public_subnet.id}"
+    cidr_blocks = ["0.0.0.0/0"]
+    #source_security_group_id = "${aws_security_group.private_subnet.id}"
+}
+
+resource "aws_security_group_rule" "HTTP-outopen-to-public" {
+    type = "egress"
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.public_subnet.id}"
+    cidr_blocks = ["0.0.0.0/0"]
+    #source_security_group_id = "${aws_security_group.private_subnet.id}"
+}
+
+resource "aws_security_group_rule" "HTTPS-outopen-to-public" {
+    type = "egress"
+    from_port = 443
+    to_port = 443
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.public_subnet.id}"
+    cidr_blocks = ["0.0.0.0/0"]
+    #source_security_group_id = "${aws_security_group.private_subnet.id}"
+}
+
+
 
 
 resource "aws_security_group" "private_subnet" {
