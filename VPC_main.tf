@@ -135,6 +135,15 @@ resource "aws_security_group" "public_subnet" {
   description = "Nat Instances Security Group"
 }
 
+/*resource "aws_security_group_rule" "private-to-public-icmp-ingress" {
+    type = "ingress"
+    from_port = 0
+    to_port = 65535
+    protocol = "icmp"
+    security_group_id = "${aws_security_group.public_subnet.id}"
+    source_security_group_id = "${aws_security_group.private_subnet.id}"
+}*/
+
 resource "aws_security_group_rule" "public-to-private-ssh-egress" {
     type = "egress"
     from_port = 22
@@ -143,6 +152,16 @@ resource "aws_security_group_rule" "public-to-private-ssh-egress" {
     security_group_id = "${aws_security_group.public_subnet.id}"
     source_security_group_id = "${aws_security_group.private_subnet.id}"
 }
+
+/*resource "aws_security_group_rule" "public-to-private-icmp-egress" {
+    type = "egress"
+    from_port = 0
+    to_port = 65535
+    protocol = "icmp"
+    security_group_id = "${aws_security_group.public_subnet.id}"
+    source_security_group_id = "${aws_security_group.private_subnet.id}"
+}*/
+
 
 resource "aws_security_group_rule" "SSH-open-to-public" {
     type = "ingress"
@@ -213,6 +232,25 @@ resource "aws_security_group_rule" "SSH-open-from-public-to-private" {
     source_security_group_id = "${aws_security_group.public_subnet.id}"
 }
 
+/*resource "aws_security_group_rule" "to-private-from-public-icmp-ingress" {
+    type = "ingress"
+    from_port = 0
+    to_port = 65535
+    protocol = "icmp"
+    security_group_id = "${aws_security_group.private_subnet.id}"
+    source_security_group_id = "${aws_security_group.public_subnet.id}"
+}*/
+
+/*resource "aws_security_group_rule" "private-to-public-icmp-egress" {
+    type = "egress"
+    from_port = 0
+    to_port = 65535
+    protocol = "icmp"
+    security_group_id = "${aws_security_group.private_subnet.id}"
+    source_security_group_id = "${aws_security_group.public_subnet.id}"
+}*/
+
+
 resource "aws_security_group_rule" "private-to-db-egress" {
     type = "egress"
     from_port = 3306  
@@ -231,6 +269,24 @@ resource "aws_security_group_rule" "private-to-db-egress2" {
     source_security_group_id = "${aws_security_group.private_subnet.id}"
 }
 
+resource "aws_security_group_rule" "private-to-public-out-HTTP-traffic" {
+    type = "egress"
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.private_subnet.id}"
+    source_security_group_id = "${aws_security_group.public_subnet.id}"
+}
+
+resource "aws_security_group_rule" "private-to-public-out-HTTPS-traffic" {
+    type = "egress"
+    from_port = 443
+    to_port = 443
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.private_subnet.id}"
+    source_security_group_id = "${aws_security_group.public_subnet.id}"
+}
+
 resource "aws_security_group" "db_subnet1_sg" {
   vpc_id      = aws_vpc.vpc_test.id
   name        = "db_subnet1_sg"
@@ -244,6 +300,16 @@ resource "aws_security_group_rule" "private-to-db-ingress" {
     protocol = "tcp"
     security_group_id = "${aws_security_group.db_subnet1_sg.id}"
     source_security_group_id = "${aws_security_group.private_subnet.id}"
+}
+
+resource "aws_security_group_rule" "open-to-db-ingress" {
+    type = "ingress"
+    from_port = 3306
+    to_port = 3306
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.db_subnet1_sg.id}"
+    #source_security_group_id = "${aws_security_group.private_subnet.id}"
+    cidr_blocks = ["0.0.0.0/0"]
 }
 
 resource "aws_security_group" "db_subnet2_sg" {
@@ -272,13 +338,18 @@ resource "aws_route_table" "RT-Internetout_IGW" {
   }
 
   tags = {
-    Name = "public-route-table-${var.vpc_name}"
+    Name = "IGW-route-table-${var.vpc_name}"
     Env = "test"
   }
 }
 
 resource "aws_route_table" "RT-public_subnet" {
   vpc_id = aws_vpc.vpc_test.id
+
+  route {
+    cidr_block = "${var.cidr_block_outside}"
+    gateway_id = "${aws_internet_gateway.IGW_Suresbyvpc_test.id}"
+  }
 
   tags = {
     Name = "public-route-table-${var.vpc_name}"
