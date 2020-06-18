@@ -215,7 +215,7 @@ resource "aws_security_group_rule" "HTTPS-outopen-to-public" {
     #source_security_group_id = "${aws_security_group.private_subnet.id}"
 }
 
-
+#############################
 
 
 resource "aws_security_group" "private_subnet" {
